@@ -33,9 +33,9 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            flex-direction: row; /* Mengubah menjadi baris */
+            flex-direction: row;
         }
-        .input-group input[type="file"], .input-group input[type="text"] {
+        .input-group input[type="text"] {
             padding: 12px 16px;
             border: 1px solid #007bff;
             border-radius: 4px;
@@ -44,13 +44,11 @@
             max-width: 250px;
             font-size: 14px;
         }
-
-        .input-group input[type="file"]:focus, .input-group input[type="text"]:focus {
+        .input-group input[type="text"]:focus {
             border-color: #0056b3;
             box-shadow: 0 0 5px rgba(0, 86, 179, 0.5);
             outline: none;
         }
-
         .input-group button {
             padding: 10px 20px;
             font-size: 14px;
@@ -60,11 +58,9 @@
             border-radius: 4px;
             cursor: pointer;
         }
-
         .input-group button:hover {
             background-color: #0056b3;
         }
-
         #notification {
             margin: 20px auto;
             padding: 10px;
@@ -74,7 +70,6 @@
             text-align: center;
             position: relative;
         }
-
         .loader {
             display: none;
             margin: 10px auto;
@@ -82,7 +77,6 @@
             height: 50px;
             position: relative;
         }
-
         .loader .shoe {
             position: absolute;
             bottom: 0;
@@ -92,50 +86,41 @@
             background-size: contain;
             animation: walk 0.5s linear infinite;
         }
-
         @keyframes walk {
             0% { transform: translateX(0); }
             50% { transform: translateX(10px); }
             100% { transform: translateX(0); }
         }
-
         .status-indicator {
             width: 15px;
             height: 15px;
             border-radius: 50%;
             margin-left: 10px;
         }
-
         .status-uploaded { background-color: green; }
-        .status-not-uploaded { background-color: yellow; }
         .status-error { background-color: red; }
-
         #tableContainer {
-            max-height: 400px; /* Tentukan tinggi maksimal untuk tabel */
-            overflow-y: auto; /* Scroll tabel secara vertikal jika melebihi tinggi */
+            max-height: 400px;
+            overflow-y: auto;
             margin-top: 20px;
-            overflow-x: auto; /* Menambahkan scroll horizontal jika kolom terlalu panjang */
+            overflow-x: auto;
         }
-
         table {
             width: 100%;
             border-collapse: collapse;
-            table-layout: auto; /* Menyesuaikan ukuran kolom berdasarkan konten */
+            table-layout: auto;
         }
-
         th, td {
             border: 1px solid #ddd;
             padding: 10px;
             text-align: left;
-            word-wrap: break-word; /* Memastikan teks panjang dibungkus agar tidak keluar dari kolom */
+            word-wrap: break-word;
         }
-
         th { background-color: #007bff; color: white; }
         .highlight { background-color: yellow; }
-
         @media (max-width: 768px) {
             th, td { font-size: 14px; }
-            .input-group input[type="text"], .input-group input[type="file"], .input-group button { width: 100%; }
+            .input-group input[type="text"], .input-group button { width: 100%; }
         }
     </style>
 </head>
@@ -146,13 +131,9 @@
     <h5><i>dikembangkan oleh Achmad Ichsan Arifin [16004159]</i></h5>
 
     <div class="input-group">
-        <input type="file" id="fileInput" accept=".csv" />
-        <div id="uploadIndicator" class="status-indicator status-not-uploaded"></div> <!-- Indikator status upload -->
-    </div>
-
-    <div class="input-group">
         <input type="text" id="searchInput" placeholder="Cari..." />
         <button id="searchButton">Cari</button>
+        <div id="uploadIndicator" class="status-indicator"></div>
     </div>
 
     <div id="notification"></div>
@@ -160,69 +141,54 @@
 
     <div id="tableContainer">
         <table id="resultTable" style="display: none;">
-            <thead>
-                <tr id="tableHeader"></tr>
-            </thead>
+            <thead><tr id="tableHeader"></tr></thead>
             <tbody id="tableBody"></tbody>
         </table>
     </div>
 
     <div id="help" style="margin-top: 20px; font-size: small; text-align: center;">
-        <strong>Petunjuk:</strong> Unggah file CSV, masukkan kata kunci pencarian, dan tekan Enter atau klik "Cari".
+        <strong>Petunjuk:</strong> Data otomatis dimuat dari server, masukkan kata kunci lalu tekan Enter atau klik "Cari".
     </div>
 </div>
 
 <script>
     let data = [];
+    const csvURL = "https://madisan99.github.io/lokasissy2/data.csv";
 
-    document.getElementById('fileInput').addEventListener('change', function(event) {
-        const file = event.target.files[0];
-        const notification = document.getElementById('notification');
-        const uploadIndicator = document.getElementById('uploadIndicator');
-       
-        if (file) {
-            showLoader();
-            Papa.parse(file, {
+    async function loadCSV() {
+        showLoader();
+        try {
+            const response = await fetch(csvURL);
+            if (!response.ok) throw new Error("Gagal fetch CSV");
+            const csvText = await response.text();
+            const results = Papa.parse(csvText, {
                 delimiter: ";",
                 header: true,
-                complete: function(results) {
-                    hideLoader();
-                    if (results.data.length === 0) {
-                        showNotification("File gagal di upload", 'error');
-                        uploadIndicator.className = 'status-indicator status-error';
-                        return;
-                    }
-                    data = results.data;
-                    showNotification("File sudah di upload", 'success');
-                    uploadIndicator.className = 'status-indicator status-uploaded';
-                    document.getElementById('searchInput').focus(); // Fokus pada kolom pencarian
-                },
-                error: function(error) {
-                    hideLoader();
-                    showNotification("File gagal di upload", 'error');
-                    uploadIndicator.className = 'status-indicator status-error';
-                }
+                skipEmptyLines: true
             });
-        } else {
-            showNotification("File belum di upload", 'warning');
-            uploadIndicator.className = 'status-indicator status-not-uploaded';
+            data = results.data;
+            document.getElementById('uploadIndicator').className = 'status-indicator status-uploaded';
+            showNotification("Data berhasil dimuat dari hosting", 'success');
+        } catch (error) {
+            console.error(error);
+            document.getElementById('uploadIndicator').className = 'status-indicator status-error';
+            showNotification("Gagal memuat data dari hosting", 'error');
+        } finally {
+            hideLoader();
         }
-    });
+    }
 
     function renderTable(data) {
         const tableHeader = document.getElementById('tableHeader');
         const tableBody = document.getElementById('tableBody');
-       
         tableHeader.innerHTML = '';
         tableBody.innerHTML = '';
-
         if (data.length > 0) {
             Object.keys(data[0]).forEach(key => {
                 const th = document.createElement('th');
                 th.textContent = key;
                 tableHeader.appendChild(th);
             });
-
             data.forEach(row => {
                 const tr = document.createElement('tr');
                 Object.values(row).forEach(cell => {
@@ -233,105 +199,55 @@
                 tableBody.appendChild(tr);
             });
         }
-
-        // Tampilkan tabel setelah hasil pencarian
         document.getElementById('resultTable').style.display = 'table';
     }
 
     function setupSearch() {
         const searchInput = document.getElementById('searchInput');
         const searchButton = document.getElementById('searchButton');
-
-function performSearch() {
-    showLoader();
-    let query = searchInput.value.toLowerCase(); // Ambil query pencarian dari input
-
-    // Mengecek apakah query berupa barcode (angka dengan panjang lebih dari 6 karakter)
-    if (isBarcode(query)) {
-        // Cari baris yang memiliki barcode yang sesuai dengan query
-        const matchingRow = data.find(row => row.Barcode && row.Barcode.toLowerCase() === query);
-       
-        if (matchingRow && matchingRow.Article) {
-            // Jika ditemukan, potong 6 karakter terakhir dari artikel terkait
-            const modifiedArticle = matchingRow.Article.slice(0, -6); // Potong 6 karakter terakhir dari artikel
-            console.log("Barcode terdeteksi, mencari dengan Article yang dipotong: ", modifiedArticle);
-
-            // Lakukan pencarian ulang menggunakan artikel yang sudah dipotong
-            query = modifiedArticle.toLowerCase(); // Gunakan artikel yang dipotong untuk pencarian ulang
-        }
-    }
-
-    // Setelah mendapatkan query yang sudah dimodifikasi (jika ada), lakukan pencarian
-    const filteredData = data.filter(row => {
-        return Object.values(row).some(cell => {
-            const cellStr = cell.toString().toLowerCase();
-            return fuzzyMatch(cellStr, query); // Fuzzy match untuk mencari nilai yang sesuai
-        });
-    });
-
-    hideLoader(); // Sembunyikan loader setelah pencarian selesai
-    renderTable(filteredData); // Render hasil pencarian dalam bentuk tabel
-    searchInput.value = ''; // Kosongkan input pencarian setelah pencarian
-    showNotification(`${filteredData.length} hasil ditemukan.`, 'info'); // Tampilkan jumlah hasil yang ditemukan
-    searchInput.focus(); // Fokuskan kembali ke kolom pencarian
-}
-
-// Fungsi untuk memeriksa apakah query berupa barcode (angka dengan panjang lebih dari 6 karakter)
-function isBarcode(query) {
-    return /^\d+$/.test(query) && query.length > 6; // Pastikan query adalah angka dengan panjang lebih dari 6
-}
-
-// Fungsi pencocokan fuzzy untuk mencari kecocokan antara cell dan query
-function fuzzyMatch(str, query) {
-    const queryArr = query.split(' ');
-    return queryArr.every(q => str.includes(q)); // Pastikan setiap kata dalam query ditemukan dalam string
-}
-
-        searchButton.addEventListener('click', performSearch);
-
-        searchInput.addEventListener('keypress', function(event) {
-            if (event.key === 'Enter') {
-                performSearch();
+        function performSearch() {
+            showLoader();
+            let query = searchInput.value.toLowerCase();
+            if (isBarcode(query)) {
+                const matchingRow = data.find(row => row.Barcode && row.Barcode.toLowerCase() === query);
+                if (matchingRow && matchingRow.Article) {
+                    query = matchingRow.Article.slice(0, -6).toLowerCase();
+                }
             }
-        });
+            const filteredData = data.filter(row =>
+                Object.values(row).some(cell =>
+                    cell.toString().toLowerCase().includes(query)
+                )
+            );
+            hideLoader();
+            renderTable(filteredData);
+            showNotification(`${filteredData.length} hasil ditemukan.`, 'info');
+        }
+        searchButton.addEventListener('click', performSearch);
+        searchInput.addEventListener('keypress', e => { if (e.key === 'Enter') performSearch(); });
     }
 
-    function fuzzyMatch(str, query) {
-        const queryArr = query.split(' ');
-        return queryArr.every(q => str.includes(q));
+    function isBarcode(query) {
+        return /^\d+$/.test(query) && query.length > 6;
     }
 
     function showNotification(message, type) {
         const notification = document.getElementById('notification');
         notification.textContent = message;
         notification.style.display = 'block';
-       
         if (type === 'success') {
-            notification.style.backgroundColor = 'green';
-            notification.style.color = 'white';
-        } else if (type === 'warning') {
-            notification.style.backgroundColor = 'yellow';
-            notification.style.color = 'black';
+            notification.style.backgroundColor = 'green'; notification.style.color = 'white';
         } else if (type === 'error') {
-            notification.style.backgroundColor = 'red';
-            notification.style.color = 'white';
+            notification.style.backgroundColor = 'red'; notification.style.color = 'white';
         } else {
-            notification.style.backgroundColor = 'orange';
-            notification.style.color = 'white';
+            notification.style.backgroundColor = 'orange'; notification.style.color = 'white';
         }
-
-        setTimeout(() => notification.style.display = 'none', 2000); // Auto-hide after 2 seconds
+        setTimeout(() => notification.style.display = 'none', 2000);
     }
+    function showLoader() { document.getElementById('loader').style.display = 'block'; }
+    function hideLoader() { document.getElementById('loader').style.display = 'none'; }
 
-    function showLoader() {
-        document.getElementById('loader').style.display = 'block';
-    }
-
-    function hideLoader() {
-        document.getElementById('loader').style.display = 'none';
-    }
-
-    // Inisialisasi pencarian setelah file di upload
+    loadCSV();
     setupSearch();
 </script>
 
